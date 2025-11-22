@@ -21,16 +21,16 @@ pip install -r requirements.txt
 
 ```bash
 # Option 1: Ping common router IPs
-ping 192.168.1.1
+ping 172.20.10.1
 # OR
-ping 192.168.0.1
+ping 172.20.10.1
 
 # Option 2: Check your network
 arp -a  # macOS/Linux
 ipconfig  # Windows
 
 # Option 3: Scan network (if nmap installed)
-nmap -sn 192.168.1.0/24
+nmap -sn 172.20.10.1/24
 ```
 
 ## Step 3: Start Backend with Network Monitor
@@ -39,14 +39,14 @@ nmap -sn 192.168.1.0/24
 
 ```bash
 cd backend
-python3 main.py --network-monitor --network-target 192.168.1.1
+python3 main.py --network-monitor --network-target 172.20.10.1
 ```
 
 ### Option B: With Custom Ping Interval
 
 ```bash
 cd backend
-python3 main.py --network-monitor --network-target 192.168.1.1 --network-ping-interval 1.0
+python3 main.py --network-monitor --network-target 172.20.10.1 --network-ping-interval 1.0
 ```
 
 ### Option C: Docker
@@ -54,7 +54,7 @@ python3 main.py --network-monitor --network-target 192.168.1.1 --network-ping-in
 ```bash
 cd backend
 export USE_NETWORK_MONITOR=1
-export NETWORK_TARGET_HOST=192.168.1.1
+export NETWORK_TARGET_HOST=172.20.10.1
 export NETWORK_PING_INTERVAL=1.0
 docker-compose build
 docker-compose up
@@ -69,8 +69,8 @@ curl http://localhost:8765/api/health
 
 You should see network metrics in the backend console:
 ```
-📡 Starting Network Monitor for 192.168.1.1...
-✅ Network Monitor started - Monitoring 192.168.1.1
+📡 Starting Network Monitor for 172.20.10.1...
+✅ Network Monitor started - Monitoring 172.20.10.1
 📡 Network: 15.2ms latency, 0.0% loss, -45.0dBm signal
 ```
 
@@ -92,7 +92,7 @@ cd backend
 pip install psutil
 
 # 2. Start backend with network monitor
-python3 main.py --network-monitor --network-target 192.168.1.1
+python3 main.py --network-monitor --network-target 172.20.10.1
 
 # 3. In another terminal, start frontend
 cd frontend
@@ -106,7 +106,7 @@ npm run dev
 
 ```bash
 # Test if target is reachable
-ping 192.168.1.1
+ping 172.20.10.1
 
 # Check if psutil is installed
 python3 -c "import psutil; print('psutil OK')"

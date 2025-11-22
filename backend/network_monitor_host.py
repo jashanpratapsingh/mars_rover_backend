@@ -138,11 +138,23 @@ def main():
     backend_url = "http://localhost:8765/api/network/update"
     
     try:
+        # Initialize rate tracking
         last_stats_time = time.time()
-        last_tx_bytes = 0
-        last_rx_bytes = 0
+        last_tx_bytes = {}
+        last_rx_bytes = {}
+        last_update_time = time.time()
         error_count = 0
         success_count = 0
+        
+        # Get initial stats for all interfaces
+        try:
+            initial_net_io = psutil.net_io_counters(pernic=True)
+            for interface, stats in initial_net_io.items():
+                if interface.startswith('en') or interface.startswith('wlan') or interface.startswith('eth'):
+                    last_tx_bytes[interface] = stats.bytes_sent
+                    last_rx_bytes[interface] = stats.bytes_recv
+        except Exception:
+            pass
         
         print("📊 Starting network monitoring...")
         print("   Press Ctrl+C to stop")
@@ -155,7 +167,7 @@ def main():
             # Get signal strength
             signal_strength = get_signal_strength()
             
-            # Calculate network rates (simplified)
+            # Calculate network rates from all active interfaces
             current_time = time.time()
             time_delta = current_time - last_stats_time
             
@@ -164,17 +176,57 @@ def main():
             
             try:
                 net_io = psutil.net_io_counters(pernic=True)
-                # Try to find active interface
+                
+                # Sum rates from all active interfaces
+                total_tx_delta = 0
+                total_rx_delta = 0
+                
                 for interface, stats in net_io.items():
-                    if interface.startswith('en') or interface.startswith('wlan'):
+                    # Only track physical network interfaces (skip loopback, etc.)
+                    if (interface.startswith('en') or interface.startswith('wlan') or 
+                        interface.startswith('eth') or interface.startswith('wifi')):
+                        
+                        if interface in last_tx_bytes and time_delta > 0:
+                            # Calculate rate for this interface
+                            tx_delta = stats.bytes_sent - last_tx_bytes[interface]
+                            rx_delta = stats.bytes_recv - last_rx_bytes[interface]
+                            
+                            # Convert bytes to bits and then to Mbps
+                            tx_rate_interface = (tx_delta * 8) / (time_delta * 1_000_000)
+                            rx_rate_interface = (rx_delta * 8) / (time_delta * 1_000_000)
+                            
+                            # Sum all interface rates
+                            total_tx_delta += tx_delta
+                            total_rx_delta += rx_delta
+                            
+                            # Update stored values
+                            last_tx_bytes[interface] = stats.bytes_sent
+                            last_rx_bytes[interface] = stats.bytes_recv
+                        else:
+                            # First time seeing this interface
+                            last_tx_bytes[interface] = stats.bytes_sent
+                            last_rx_bytes[interface] = stats.bytes_recv
+                
+                # Calculate total rates
+                if time_delta > 0:
+                    tx_rate = (total_tx_delta * 8) / (time_delta * 1_000_000)  # Mbps
+                    rx_rate = (total_rx_delta * 8) / (time_delta * 1_000_000)  # Mbps
+                
+            except Exception as e:
+                # If error, try to get total network stats as fallback
+                try:
+                    total_io = psutil.net_io_counters()
+                    if 'total_tx_bytes' not in locals():
+                        total_tx_bytes = total_io.bytes_sent
+                        total_rx_bytes = total_io.bytes_recv
+                    else:
                         if time_delta > 0:
-                            tx_rate = ((stats.bytes_sent - last_tx_bytes) * 8) / (time_delta * 1_000_000)
-                            rx_rate = ((stats.bytes_recv - last_rx_bytes) * 8) / (time_delta * 1_000_000)
-                            last_tx_bytes = stats.bytes_sent
-                            last_rx_bytes = stats.bytes_recv
-                        break
-            except Exception:
-                pass
+                            tx_rate = ((total_io.bytes_sent - total_tx_bytes) * 8) / (time_delta * 1_000_000)
+                            rx_rate = ((total_io.bytes_recv - total_rx_bytes) * 8) / (time_delta * 1_000_000)
+                        total_tx_bytes = total_io.bytes_sent
+                        total_rx_bytes = total_io.bytes_recv
+                except Exception:
+                    pass
             
             last_stats_time = current_time
             
@@ -199,6 +251,7 @@ def main():
                     
                     if success_count == 1 or success_count % 30 == 0:
                         print(f"✅ Sent metrics: {latency:.1f}ms latency, {packet_loss:.1f}% loss, {signal_strength:.1f}dBm")
+                        print(f"   TX: {tx_rate:.2f} Mbps, RX: {rx_rate:.2f} Mbps")
                 else:
                     error_count += 1
                     if error_count == 1:
