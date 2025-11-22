@@ -85,10 +85,16 @@ class TascMonitoringBackendNode(Node):
         """
         Callback for joystick data.
         """
+        axes_list = list(msg.axes)
+        buttons_list = list(msg.buttons)
+        
+        # Log joystick data to console
+        print(f"\n🎮 [ROS] Joystick received - Axes: {[f'{a:.2f}' for a in axes_list]}, Buttons: {buttons_list}")
+        
         with self._lock:
             self.latest_joystick_data = {
-                "axes": list(msg.axes),
-                "buttons": list(msg.buttons),
+                "axes": axes_list,
+                "buttons": buttons_list,
                 "timestamp": time.time()
             }
 

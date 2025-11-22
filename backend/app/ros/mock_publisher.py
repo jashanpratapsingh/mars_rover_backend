@@ -5,6 +5,7 @@ from sensor_msgs.msg import Joy
 import random
 import time
 import threading
+import math
 from app.core.config import settings
 
 class MockRoverPublisher(Node):
@@ -24,7 +25,9 @@ class MockRoverPublisher(Node):
         )
         
         self.timer = self.create_timer(1.0 / settings.system.update_rate_hz, self.publish_data)
+        self.start_time = time.time()
         self.get_logger().info("Mock Rover Publisher started")
+        print("🎮 Mock Joystick Publisher: Generating simulated joystick data...")
 
     def publish_data(self):
         # Simulate Network Metrics
@@ -39,11 +42,42 @@ class MockRoverPublisher(Node):
         ]
         self.metrics_pub.publish(metrics_msg)
         
-        # Simulate Joystick
+        # Simulate Joystick with dynamic movement
         joy_msg = Joy()
-        joy_msg.axes = [random.uniform(-1.0, 1.0) for _ in range(6)]
-        joy_msg.buttons = [random.randint(0, 1) for _ in range(12)]
+        t = time.time() - self.start_time
+        
+        # Create smooth circular motion for left stick
+        left_x = 0.5 * math.sin(t * 0.5)
+        left_y = 0.5 * math.cos(t * 0.5)
+        
+        # Create different pattern for right stick
+        right_x = 0.3 * math.sin(t * 0.7)
+        right_y = 0.3 * math.cos(t * 0.9)
+        
+        # Triggers (L2, R2) - simulate gradual press/release
+        l2_axis = 0.5 + 0.5 * math.sin(t * 0.3)
+        r2_axis = 0.5 + 0.5 * math.cos(t * 0.4)
+        
+        joy_msg.axes = [
+            left_x,      # 0: Left stick X
+            left_y,      # 1: Left stick Y
+            l2_axis,     # 2: L2 trigger
+            right_x,      # 3: Right stick X
+            right_y,      # 4: Right stick Y
+            r2_axis      # 5: R2 trigger
+        ]
+        
+        # Buttons - occasionally press random buttons
+        buttons = [0] * 13
+        if random.random() < 0.1:  # 10% chance to press a button
+            buttons[random.randint(0, 12)] = 1
+        
+        joy_msg.buttons = buttons
         self.joy_pub.publish(joy_msg)
+        
+        # Log occasionally
+        if int(t) % 5 == 0 and t - int(t) < 0.1:
+            print(f"🎮 [MOCK] Published joystick - L:({left_x:.2f},{left_y:.2f}) R:({right_x:.2f},{right_y:.2f})")
 
 def start_mock_publisher():
     # Note: rclpy.init() should be called globally before this if running in same process

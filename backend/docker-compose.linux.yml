@@ -1,0 +1,26 @@
+version: '3.8'
+
+# Linux-specific docker-compose configuration
+# Use this on Linux systems where /dev/input devices are available
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: space_rover_backend
+    ports:
+      - "8765:8765"
+    volumes:
+      - .:/app
+      # Mount joystick devices (Linux)
+      - /dev/input:/dev/input:ro
+    devices:
+      # Pass through joystick devices
+      - /dev/input/js0:/dev/input/js0
+    environment:
+      - USE_PS4_BRIDGE=1
+      - NO_MOCK_PUBLISHER=1
+    privileged: true  # Required for joystick device access
+    restart: unless-stopped
+

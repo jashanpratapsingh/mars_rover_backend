@@ -152,17 +152,22 @@ class DatabaseManager:
         """
         Log joystick event to database.
         """
-        if self.use_mock:
-            return
+        # Allow logging even in mock mode (it will just print or use in-memory DB)
+        # if self.use_mock:
+        #    print(f"[MOCK DB] Joystick Event: {event_type} - {details}")
+        #    return
 
-        async with self.async_session() as session:
-            async with session.begin():
-                log_entry = JoystickEvents(
-                    timestamp=datetime.now(),
-                    event_type=event_type,
-                    details=details
-                )
-                session.add(log_entry)
+        try:
+            async with self.async_session() as session:
+                async with session.begin():
+                    log_entry = JoystickEvents(
+                        timestamp=datetime.now(),
+                        event_type=event_type,
+                        details=details
+                    )
+                    session.add(log_entry)
+        except Exception as e:
+            print(f"DB Error logging joystick: {e}")
 
     async def _batch_insert_loop(self):
         while self._running:
