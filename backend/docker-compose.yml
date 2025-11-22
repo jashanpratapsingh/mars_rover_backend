@@ -11,9 +11,14 @@ services:
     volumes:
       # Mount the code directory for development
       - .:/app
+    # Note: network_mode: "host" doesn't work on macOS Docker
+    # For iPad monitoring, use network_monitor_host.py script on macOS host
     environment:
       - USE_PS4_BRIDGE=1
       - NO_MOCK_PUBLISHER=1
+      - USE_NETWORK_MONITOR=${USE_NETWORK_MONITOR:-0}
+      - NETWORK_TARGET_HOST=${NETWORK_TARGET_HOST:-192.168.1.1}
+      - NETWORK_PING_INTERVAL=${NETWORK_PING_INTERVAL:-1.0}
     # Note: On macOS, joystick devices can't be directly passed through
     # The controller should be connected to the host, and we'll use network access
     # For Linux, uncomment the following lines:

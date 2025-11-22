@@ -616,6 +616,51 @@ async def health_check():
 async def get_config():
     return settings.dict()
 
+@app.post("/api/network/update")
+async def receive_network_update(request: Request):
+    """
+    Receive network metrics from host (for macOS Docker setup).
+    This allows the macOS host to monitor network and send metrics to Docker container.
+    """
+    try:
+        data = await request.json()
+        
+        latency = data.get('latency', 0.0)
+        packet_loss = data.get('packet_loss', 0.0)
+        signal_strength = data.get('signal_strength', -90.0)
+        tx_rate = data.get('tx_rate', 0.0)
+        rx_rate = data.get('rx_rate', 0.0)
+        timestamp = data.get('timestamp', time.time())
+        
+        # Store in ROS node (same interface as ROS network metrics)
+        global ros_node
+        if ros_node:
+            with ros_node._lock:
+                ros_node.latest_network_metrics = {
+                    "latency": float(latency),
+                    "packet_loss": float(packet_loss),
+                    "signal_strength": float(signal_strength),
+                    "tx_rate": float(tx_rate),
+                    "rx_rate": float(rx_rate),
+                    "timestamp": float(timestamp)
+                }
+            
+            # Log occasionally
+            current_time = time.time()
+            if int(current_time) % 10 == 0:
+                print(f"\n📡 [HTTP] Network metrics received from host:")
+                print(f"   Latency: {latency:.1f}ms, Loss: {packet_loss:.1f}%, Signal: {signal_strength:.1f}dBm")
+            
+            logger.debug(f"Received network metrics from host: {latency}ms, {packet_loss}% loss")
+            return {"status": "ok", "received": True}
+        else:
+            return {"status": "error", "message": "ROS node not initialized"}
+    except Exception as e:
+        logger.error(f"Error receiving network update: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "message": str(e)}
+
 @app.post("/api/joystick/update")
 async def receive_joystick_update(request: Request):
     """
