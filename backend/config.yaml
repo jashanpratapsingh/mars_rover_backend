@@ -1,0 +1,29 @@
+system:
+  update_rate_hz: 10
+  log_level: INFO
+
+ros:
+  node_name: tasc_monitoring_backend_node
+  topics:
+    network_metrics: network_metrics
+    joy: joy
+  qos_history_depth: 10
+
+ai:
+  anomaly_detection:
+    contamination: 0.1
+    train_interval_samples: 1000
+    initial_buffer_size: 100
+  prediction:
+    history_buffer_size: 50
+    forecast_horizon_seconds: 5
+  alerts:
+    suppression_window_seconds: 30
+
+database:
+  url: sqlite+aiosqlite:///./rover_data.db
+  batch_insert_interval_seconds: 1.0
+
+server:
+  host: 0.0.0.0
+  port: 8765
